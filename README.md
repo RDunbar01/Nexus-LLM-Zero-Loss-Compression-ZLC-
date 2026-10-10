@@ -1,8 +1,49 @@
 # Nexus ZLC · Zero Loss Compression
 
+## Created with AI-assisted coding
+
+**Rich Dunbar · Nexus Emerging Technology · Build → Measure → Learn**
+
+I developed Nexus ZLC using **AI-assisted coding**, directing the project and using AI to help implement, debug, review and refine the code. Development followed a repeated **build–measure–learn** cycle: turn an idea into an experiment, inspect the evidence and use the result to guide the next revision.
+
+### Where the idea began
+
+The original goal was to compress a small office assistant embedded within a **custom, Power BI-like HTML dashboard**. I had integrated a small language model to help users understand and work with that dashboard, and wanted a compact file that could reconstruct itself when opened.
+
+A saved early self-extracting HTML audit records:
+
+| Early HTML artifact | Size |
+| --- | ---: |
+| Original input HTML | **4,663,015 bytes** |
+| Compressed self-extracting HTML | **2,699,012 bytes** |
+| Reduction relative to the original input | **42.12%** |
+| Corrected expanded application reconstructed at launch | **4,682,576 bytes** |
+
+The compressed package reconstructs the corrected expanded application, whose size differs from the original input because the packaging work included repairs. The documented **42.118736%** reduction is measured against the original input, and replaces my approximate recollection of 50%. I recall the file reconstructing in about a second on my test bed, but a reproducible timing record has not been established for that figure.
+
+This early HTML approach reconstructed the complete application before initialization. The later GGUF compressed-inference work follows a different execution path.
+
+### From repeated patterns to compressed model execution
+
+The idea was inspired by pattern recognition. When I inspected GGUF files, I noticed repeated patterns, blocks and sequences in the data. I wanted to replace suitable repeated values or structures with compact references and store the information needed to recover their meaning exactly.
+
+GGUF contains **model metadata and numerical tensor data**, rather than executable source code. In the implemented codecs, the “placeholders” are indexes, packed fields and other compact representations that the Nexus runtime knows how to decode.
+
+After verifying that a compressed file could restore exactly, I extended my custom **web-based WebGPU inference engine** to work with supported compressed representations.
+
+My objective was to avoid expanding the complete weight matrix before inference. Instead, the kernels look up or reconstruct the exact numerical operands they need while computing. This still involves decoding; the distinction is **local operand reconstruction without a fully expanded weight-matrix allocation**.
+
+### Original contribution and research context
+
+**To my knowledge, the specific Nexus ZLC implementation and integration described here are an original contribution arising from my own development work.**
+
+That is a statement about this project and its implementation, not a claim that I invented dictionary compression, lossless model compression or compressed-weight inference. Those fields have substantial prior work, acknowledged below. Establishing research novelty for a particular mechanism requires comparison with that work.
+
+---
+
 ### Lossless GGUF compression and experimental compressed-weight inference
 
-**Developed by Richard Dunbar · Nexus Emerging Technology**
+**Developed by Rich Dunbar · Nexus Emerging Technology**
 
 Nexus ZLC is an experimental offline toolkit that reduces supported GGUF model files while preserving their original data exactly. Its custom WebGPU backend reads supported compressed weights directly, reconstructing the operands it needs inside its kernels without allocating a fully expanded weight matrix.
 
@@ -15,6 +56,22 @@ The suite combines compression, exact restoration, integrity verification, and b
 Offline AI deployment is often constrained by model storage and memory capacity. Nexus ZLC explores reducing those requirements without introducing another quantization step.
 
 The intended use case is preserving the supplied model representation while fitting more of its weights into limited memory. A smaller representation could help avoid CPU offload, but that capacity and performance benefit still requires testing on the target hardware.
+
+## Evidence summary
+
+| Claim | What the available record supports |
+|---|---|
+| Early dashboard/application compression | A saved self-extracting HTML audit records **42.12%** reduction |
+| Approximately one-second HTML reconstruction | Developer recollection; reproducible timing not verified |
+| Original F16 reconstruction | Recorded exact-restoration checks; source size and SHA-256 identify the expected original |
+| Direct compressed inference | Implemented kernel-local operand lookup/reconstruction without a full expanded weight matrix in the tested path |
+| F16 and Q8 perplexity preservation | **Both paired 128-target pilots completed with identical logits and scores** |
+| Physical test-bed use | Developer reports running the program on his test bed |
+| Radeon throughput and total physical VRAM savings | Not established by the saved software-adapter paired benchmarks |
+| General capability preservation across tasks | Not established by a 128-target pilot alone |
+| Data-center deployment and shared cross-model dictionaries | Future research directions |
+
+The reported model file sizes below replace approximate figures such as “around 26%.” Test-bed observations, recorded numerical results and proposed applications are kept distinct.
 
 ## Features
 
@@ -93,7 +150,24 @@ Within each representation:
 
 ### Exact source-file preservation
 
-Restore reproduces the complete original GGUF bytes and SHA-256, including metadata and padding.
+Restore reproduces the complete original GGUF bytes and SHA-256, including metadata and padding. The restored file must match the source representation, not merely produce similar model output.
+
+Saved reference-restoration records identify matching original and restored files:
+
+```text
+F16 original AND restored — 270,885,952 bytes
+SHA-256: f535f83ec568d040f88ddc04a199fa6da90923bbb41d4dcaed02caa924d6ef57
+
+Q8_0 original AND restored — 144,811,360 bytes
+SHA-256: 5a1395716f7913741cc51d98581b9b1228d80987a9f7d3664106742eb06bba83
+```
+
+Both saved records report **exact byte equality** and **full SHA-256 verification**. They are reference-restoration records, explicitly marked as not performed during the paired inference run. This documentation update did not rerun those operations.
+
+| Reference restoration | Verified bytes | Exact byte equality | Original/restored SHA-256 |
+|---|---:|---|---|
+| F16 | 270,885,952 | **True** | **Matching** |
+| Q8_0 | 144,811,360 | **True** | **Matching** |
 
 ### Input-relative losslessness
 
@@ -178,6 +252,12 @@ Each pair additionally shares 196,608 readback bytes.
 
 These are instrumented application-owned buffer totals. They exclude host memory, backend staging, and driver/internal allocations. They are **not measured physical VRAM usage**. The paired comparison process holds both inference paths.
 
+### Physical test-bed observations
+
+I have run this program on my own test bed. That hands-on use is part of the project's development history.
+
+The exact before/after perplexity and buffer figures in this README come from the recorded **SwiftShader CPU-Vulkan** experiments. They must not be presented as measured Radeon throughput, peak physical VRAM or data-center efficiency results. A physical-device report needs the matching model/build hashes, browser, driver, GPU, workload and measurement method.
+
 ## Quick start
 
 1. Open the released `Nexus-ZLC.html`.
@@ -190,7 +270,7 @@ These are instrumented application-owned buffer totals. They exclude host memory
 If WebGPU is unavailable from a local file origin, serve the release folder on localhost:
 
 ```bash
-python -m http.server 8000
+python -m http.server 8000 --bind 127.0.0.1
 ```
 
 Then open `http://localhost:8000/Nexus-ZLC.html`. Do not bypass browser security warnings.
@@ -199,14 +279,14 @@ The codec supports bounded little-endian GGUF v2/v3 files, with a maximum 512 Mi
 
 ## Academic context
 
-Lossless model compression and compressed neural-network execution have substantial prior art. Nexus ZLC is an experimental GGUF-oriented implementation with matched F16/Q8_0 evidence; no claim of being the first or outperforming the following systems is made.
+Lossless model compression and compressed neural-network execution have substantial prior art. Nexus ZLC is an experimental GGUF-oriented implementation with matched F16/Q8_0 evidence. My originality statement concerns the specific Nexus implementation; no claim of being first in the field or outperforming the following systems is made.
 
 | Research | Relevance |
 |---|---|
-| CER/CSER | Compact low-entropy matrix representations and computation over shared values. |
+| CER/CSER | Compact low-entropy matrices and computation using shared numerical values. |
 | ZipNN | Lossless compression of neural-network data for storage and transfer. |
-| DFloat11 | Lossless floating-point compression integrated with GPU inference. |
-| ZipServ | Hardware-aware lossless compression and inference integration. |
+| DFloat11 | Lossless floating-point compression with GPU decompression and block-level inference integration. |
+| ZipServ | Hardware-aware lossless compression, including fused decode-stage decompression and matrix computation without a dense intermediate global-memory buffer. |
 
 These references provide research context. Their results are not Nexus ZLC results, and citation does not imply their code is bundled.
 
@@ -236,15 +316,51 @@ Nexus ZLC is separate from the project's LittleBit-inspired lossy factorization 
 
 llama.cpp was used for reference tooling and tokenization checks. The browser application's inference backend is the Nexus implementation.
 
+## Future research: shared pattern libraries
+
+I want to investigate **exact patterns shared across multiple language models**. A pattern that appears only once in one model may still be reusable if the same bytes or numerical representation occur in other models.
+
+The proposed idea is a versioned shared dictionary, with each participating model storing compact references and its own exceptions. This is **not implemented or validated by the baseline experiments described here**.
+
+```mermaid
+flowchart TD
+    A["Multiple model files"] --> B["Analyze exact shared patterns"]
+    B --> C["Candidate shared dictionary"]
+    C --> D["Per-model references and exceptions"]
+    D --> E["Measure total storage and runtime cost"]
+    E --> F["Verify exact restoration and matched inference"]
+```
+
+A fair comparison must include:
+
+- The complete shared dictionary and versioning information.
+- Every model's references, indexes, metadata and exceptions.
+- Total storage across the collection, compared with compressing each model independently.
+- Dictionary residency, cache behavior and temporary allocations during inference.
+- Exact restoration and output comparisons for each admitted model.
+- Models held out from dictionary construction.
+
+Similar weight distributions are not enough: lossless reuse requires exact reconstructability.
+
+## Potential relevance to larger deployments
+
+The F16 result demonstrates **27.764069% lower complete-file storage for the tested checkpoint without changing its stored F16 values**. The paired pilot also demonstrates matching inference outputs for the tested inputs.
+
+If those properties generalize with acceptable runtime overhead, this approach could help memory-constrained local systems and larger deployments preserve a higher-precision representation while storing more model data in a limited budget.
+
+However, **27.76% smaller files do not automatically mean 27.76% lower total VRAM, faster inference or unchanged quality on every task**. Activations, KV cache, temporary buffers, dictionary access and hardware behavior also matter.
+
+Quantization trades precision for compactness; lossless encoding pursues a different trade-off involving redundancy and decoding cost. Existing lossless systems already explore this field. Nexus ZLC's potential data-center value requires its own multi-model, physical-hardware evidence.
+
 ## Limitations and next steps
 
 - One checkpoint family and two supplied numerical representations.
 - Short-prefix evaluation rather than full-corpus perplexity.
-- No demonstrated browser/Radeon throughput or physical-VRAM benefit from these runs.
+- Developer-reported test-bed use, but no quantified browser/Radeon throughput or physical-VRAM benefit established by the saved paired runs.
 - No universal compression ratio, portable bitwise result, or production-readiness claim.
 - Experimental enhanced F16 formats are excluded from the reported paired baseline results.
 
-Next steps are longer held-out evaluations, independent graph validation, additional models, and controlled physical-GPU measurements of peak memory, prefill, first-token latency, and decode speed.
+Next steps are longer held-out evaluations, independent graph validation, additional models, and controlled physical-GPU measurements of peak memory, prefill, first-token latency, and decode speed. The enhanced F16 variant previously reaching approximately **28.73%** reduction still needs its own paired full-graph perplexity evaluation; its compression result must not be combined with the baseline's inference evidence.
 
 ## Credits and licensing
 
